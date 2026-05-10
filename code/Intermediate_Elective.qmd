@@ -18,34 +18,156 @@ format: pdf
 library(tidyverse)
 library(here)
 library(janitor)
-library(snakecase)
+library(NatParksPalettes)
 
-# wrap axis labels
-library(scales)
 
 # reading in .xlsx files
 library(readxl)
 
-# visualize missing data
-library(naniar)
-
-# arrange plots
-library(patchwork)
 ```
 
-
+## Data
 
 ```{r}
 
 birds <- read_csv(here("data", "birds.csv"))
 
+ikea <- read_csv(here("data", "ikea.csv"))
+
+aq_ins <- read_xlsx(
+  here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
+  sheet = "Aquatic Insects")
+
+sites <- read_xlsx(
+  here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
+  sheet = "sites"
+)
+```
+## Cleaning sites
+
+```{r}
+#| label: cleaning-sites
+
+# creating new object from sites
+ncos_sites <- sites |> 
+  #filtering to only include NCOS quarterly sites
+  filter(sector == "NCOS" & 
+           sampling_frequency == "Quarterly")
 
 ```
 
+## Cleaning aq_ins
+```{r}
+#| label: cleaning_aquatic_insects
+
+# create a new object
+aq_ins_clean <- aq_ins |> 
+  # clean column names
+  clean_names() |> 
+  semi_join(ncos_sites, by = "site") |> 
+  mutate(site_full = case_when(
+    site == "NVBR" ~ "North of Venoco Bridge",
+    site == "NEC" ~ "East Channel",
+    site == "NMC" ~ "Main Channel",
+    site == "NPB" ~ "South of Phelps Bridge",
+    site == "NPB1" ~ "North of Phelps Bridge",
+    site == "NPB2" ~ "Phelps Road",
+    site == "NWP" ~  "West Pond",
+    site == "NDC" ~ "Devereux Creek"))
 
 
 
+```
 
+# TidyTuesday 03/11/2020 - IKEA Furniture
+
+```{r}
+
+# Wrangle data to count entries per person and site
+dt <- aq_ins_clean |> 
+  # remove rows where either person or site is missing
+  filter(!is.na(person_entering_data), !is.na(site_full)) |> 
+  # group by every unique combination of site and person
+  group_by(site_full, person_entering_data) |> 
+  # count the number of rows in each group, creating column "n"
+  tally() |> 
+  # ungroup
+  ungroup() |> 
+  # keep only person/site combinations with 2 or more entries, too crowded
+  filter(n >= 2) |>
+  # sort rows from highest to lowest count
+  arrange(desc(n)) |> 
+  # convert site and person columns to factors 
+  mutate(site_full = as.factor(site_full),
+         person_entering_data = as.factor(person_entering_data))
+
+# Set number of empty bars between groups
+# defines how many blank bars to insert as visual padding in the circular plot
+empty_bar <- 2
+
+# create a matrix of NA values with the same number of columns as dt
+to_add <- matrix(NA, empty_bar, ncol(dt))
+# assign column names to match dt so they can be row-bound together
+colnames(to_add) <- colnames(dt)
+# empty rows go to the bottom of dt
+dt <- rbind(dt, to_add)
+# assign a numeric ID to each row
+# this ID becomes the x-axis position in the circular plot
+dt$id <- seq(1, nrow(dt))
+
+# calculate label angles
+# copy dt so label angle calculations don't affect the plotting data
+label_data <- dt
+# total number of bars including empty ones
+number_of_bar <- nrow(label_data)
+# calculate the angle for each bar's label based on its position in the circle
+angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
+# if the angle puts the label on the left side of the circle, right-align it
+# otherwise left-align — keeps labels readable on both sides
+label_data$hjust <- ifelse(angle < -90, 1, 0)
+# flip labels on the left side of the circle 180 degrees so they don't appear upside down
+label_data$angle <- ifelse(angle < -90, angle + 180, angle)
+
+# Plot
+p <- ggplot(dt) +
+  # draw bars with position on x (by ID), height = count, colored by site
+  geom_bar(aes(x = as.factor(id), y = n, fill = site_full), stat = "identity") +
+  # set y-axis limits: negative lower bound creates the hollow center of the wheel;
+  # upper bound gives room above the tallest bar
+  ylim(-10, max(dt$n, na.rm = TRUE) + 10) +
+  theme_minimal() +
+  # apply custom color palette
+  scale_fill_manual(values = natparks.pals("DeathValley")) +
+  theme(
+    # remove all axis tick labels
+    axis.text = element_blank(),
+    # remove axis titles
+    axis.title = element_blank(),
+    # remove background grid lines
+    panel.grid = element_blank(),
+    # set negative margins to maximize plot area in the circular layout
+    plot.margin = unit(rep(-1, 4), "cm")
+  ) +
+  # add a centered title in the middle of the wheel
+  annotate(geom = "text",
+           x = 0, y = -10,        # x = 0 centers it; y = -10 places it in the hollow
+           hjust = .5, vjust = 1,  # center-align horizontally, top-align vertically
+           label = "NCOS Aquatic Invertebrate\nSamples by Data Enterer",
+           size = 4.3, lineheight = .8,
+           color = "black") +
+  # wrap the bar chart into a circle
+  coord_polar(start = 0) +
+  # add person name labels at the end of each bar, rotated to follow the circle
+  geom_text(data = label_data,
+            aes(x = id, y = n + 1,              # place label just above the bar tip
+                label = person_entering_data,    # text to display
+                hjust = hjust),                  # use the calculated alignment
+            color = "black", fontface = "bold", alpha = 0.6, size = 3,
+            angle = label_data$angle,            # rotate label to match bar angle
+            inherit.aes = FALSE)
+
+
+```
 
 
 
