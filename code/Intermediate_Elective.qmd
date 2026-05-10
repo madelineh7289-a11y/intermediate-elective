@@ -1,0 +1,52 @@
+---
+title: "Intermediate-Elective"
+author: "Madeline Hulle"
+date: "2026-05-10"
+format: pdf
+
+---
+# Set Up
+
+
+## Packages 
+```{r}
+#| label: Packages
+#| message: false
+
+# general use and cleaning
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(snakecase)
+
+# wrap axis labels
+library(scales)
+
+# reading in .xlsx files
+library(readxl)
+
+# visualize missing data
+library(naniar)
+
+# arrange plots
+library(patchwork)
+```
+
+
+
+```{r}
+
+birds <- read_csv(here("data", "birds.csv"))
+
+
+```
+
+
+
+
+
+
+
+
+
