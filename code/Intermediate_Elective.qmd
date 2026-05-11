@@ -30,36 +30,22 @@ library(readxl)
 
 ```{r}
 
-birds <- read_csv(here("data", "birds.csv"))
 
 aq_ins <- read_xlsx(
   here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
   sheet = "Aquatic Insects")
 
-sites <- read_xlsx(
-  here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
-  sheet = "sites"
-)
 ```
-## Cleaning sites
 
-```{r}
-#| label: cleaning-sites
-
-# creating new object from sites
-ncos_sites <- sites |> 
-  #filtering to only include NCOS quarterly sites
-  filter(sector == "NCOS" & 
-           sampling_frequency == "Quarterly")
-
-```
 
 ## Cleaning aq_ins
 ```{r}
 #| label: cleaning_aquatic_insects
 
 # create a new object
-aq_ins_clean <- aq_ins |> 
+aq_ins_clean <- aq_ins |>
+  # only including columns of interest
+  select(`Person Entering Data`, Site) |> 
   # clean column names
   clean_names() |> 
   semi_join(ncos_sites, by = "site") |> 
@@ -83,11 +69,11 @@ aq_ins_clean <- aq_ins |>
 
 - I chose Cristina Cametti’s “IKEA most popular designers” visualization for my inspiration. 
 
-- This made sense for the `birds` dataset because the ikea visualization was the comparison of two categorical variables, which `birds` has. The useage of designers in the ikea visualization inspired me to use informaion from a column which we havent used before - Data Enterer. 
+- This made sense for the `aq_ins_clean` dataset because the ikea visualization was the comparison of two categorical variables, which `aq_ins_clean` has. The usage of designers in the ikea visualization inspired me to use information from a column which we haven used before - Data Enterer. 
 
-- 
+- The variables being shown from the `aq_ins_clean` dataset are `person_entering_data` and `site_full`. The person entering data will be represented by one bar and the colors making up the bar (and the relative sizes of these colors) will represent the site that observation came from and the number of samples entered. 
 
-
+## 2. 
 
 
 
@@ -100,73 +86,54 @@ aq_ins_clean <- aq_ins |>
 
 ```{r}
 
-# remove rows where either person or site is missing, group by site and person
+# wrangle: one row per person/site combo, with person totals for sorting
 dt <- aq_ins_clean |> 
   filter(!is.na(person_entering_data), !is.na(site_full)) |> 
-  group_by(site_full, person_entering_data) |> 
-# count entries per person/site combination
+  group_by(person_entering_data, site_full) |> 
   tally() |> 
   ungroup() |> 
-# remove low-count entries to reduce crowding
-  filter(n >= 2) |>
-  arrange(desc(n)) |> 
-# convert to factors
-  mutate(site_full = as.factor(site_full),
-         person_entering_data = as.factor(person_entering_data))
+  group_by(person_entering_data) |> 
+  mutate(total = sum(n)) |> 
+  ungroup() |> 
+  filter(total >= 2) |> 
+  arrange(desc(total)) |> 
+  mutate(person_entering_data = fct_reorder(person_entering_data, total, .desc = TRUE),
+         site_full = as.factor(site_full))
 
-# number of blank bars to add as spacing
-empty_bar <- 2
+# one row per person for angle/label calculations
+label_data <- dt |> 
+  group_by(person_entering_data) |> 
+  summarize(total = first(total)) |> 
+  arrange(desc(total)) |> 
+  mutate(id = row_number())
 
-# create empty rows for spacing
-to_add <- matrix(NA, empty_bar, ncol(dt))
-# match column names to dt
-colnames(to_add) <- colnames(dt)
-# append empty rows to dt
-dt <- rbind(dt, to_add)
-
-# give each bar a numeric position on the x-axis
-dt$id <- seq(1, nrow(dt))
-
-# copy dt for label calculations
-label_data <- dt
-# count total number of bars
 number_of_bar <- nrow(label_data)
-
-# calculate rotation angle for each label based on its position in the circle
 angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
-
-# align labels on the left side of the circle
 label_data$hjust <- ifelse(angle < -90, 1, 0)
-# flip labels on the left side so they stay readable
 label_data$angle <- ifelse(angle < -90, angle + 180, angle)
 
-# initialize plot with bars colored by site
+# plot
 p <- ggplot(dt) +
-  geom_bar(aes(x = as.factor(id), y = n, fill = site_full), stat = "identity") +
-# negative lower bound creates hollow center, upper bound gives room above tallest bar
-  ylim(-10, max(dt$n, na.rm = TRUE) + 10) +
+  geom_bar(aes(x = person_entering_data, y = n, fill = site_full),
+           stat = "identity", position = "stack") +
+  ylim(-10, max(label_data$total, na.rm = TRUE) + 5) +
   theme_minimal() +
-# apply custom color palette
-  scale_fill_manual(values = natparks.pals("DeathValley")) +
+  scale_fill_manual(values = natparks.pals("DeathValley"), name = "Site") +
   theme(
-# remove axis labels, titles, and grid lines
     axis.text = element_blank(),
     axis.title = element_blank(),
     panel.grid = element_blank(),
     plot.margin = unit(rep(-1, 4), "cm")
   ) +
-# add title in the center of the wheel
   annotate(geom = "text",
            x = 0, y = -10,
            hjust = .5, vjust = 1,
            label = "NCOS Aquatic Invertebrate\nSamples by Data Enterer",
-           size = 2.5, lineheight = .8,
+           size = 2.4, lineheight = .8,
            color = "black") +
-# wrap bar chart into a circle
   coord_polar(start = 0) +
-# add person name labels rotated to follow the circle
   geom_text(data = label_data,
-            aes(x = id, y = n + 1,
+            aes(x = person_entering_data, y = total + 1,
                 label = person_entering_data,
                 hjust = hjust),
             color = "black", fontface = "bold", alpha = 0.6, size = 3,
