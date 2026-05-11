@@ -73,7 +73,7 @@ aq_ins_clean <- aq_ins |>
 
 - The variables being shown from the `aq_ins_clean` dataset are `person_entering_data` and `site_full`. The person entering data will be represented by one bar and the colors making up the bar (and the relative sizes of these colors) will represent the site that observation came from and the number of samples entered. 
 
-## 2. 
+## 2. Plan Your Figure
 
 
 
@@ -82,67 +82,129 @@ aq_ins_clean <- aq_ins |>
 
 
 
-# TidyTuesday 03/11/2020 - IKEA Furniture
+## 3. Code Your Figure - TidyTuesday 03/11/2020 - IKEA Furniture
 
+### Wrangling
 ```{r}
+#| label: wrangling
 
-# wrangle: one row per person/site combo, with person totals for sorting
+# create new object from `aq_ins_clean`
 dt <- aq_ins_clean |> 
+  # filtering out NAs from the columns of interest
   filter(!is.na(person_entering_data), !is.na(site_full)) |> 
+  # group by person and site
   group_by(person_entering_data, site_full) |> 
+  # count how many times each person/site combination appears
   tally() |> 
+  # ungroup data 
   ungroup() |> 
+  # re-group by just person so we can calculate each person's total count
   group_by(person_entering_data) |> 
+  # add a new column that sums all entries for each person
   mutate(total = sum(n)) |> 
+  # ungroup data frame
   ungroup() |> 
+  # keep only people who have entered data 2 or more times total (keep from overcrowding)
   filter(total >= 2) |> 
+  # sorting rows from highest to lowest total entries
   arrange(desc(total)) |> 
+  # reorder the person factor levels by total count so the plot displays in order
   mutate(person_entering_data = fct_reorder(person_entering_data, total, .desc = TRUE),
+          # convert site to a factor so ggplot can use it for colors
          site_full = as.factor(site_full))
 
+```
+
+### Angle/Label Calculations
+```{r}
+#| label: calculating-angle-label
+
 # one row per person for angle/label calculations
+# creating new object from wrangled `dt`
 label_data <- dt |> 
+  # group by person
   group_by(person_entering_data) |> 
+    # keep only the first value of "total" for each person (they are all the same)
   summarize(total = first(total)) |> 
+  # sort by total so label positions match bar positions
   arrange(desc(total)) |> 
+  # create a new column for giving each person a number 1 through n representing their position in the circle
   mutate(id = row_number())
 
-number_of_bar <- nrow(label_data)
-angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
-label_data$hjust <- ifelse(angle < -90, 1, 0)
-label_data$angle <- ifelse(angle < -90, angle + 180, angle)
 
+# counting how many bars there will be total
+number_of_bar <- nrow(label_data)
+
+# calculate the angle each label should be rotated based on its position in the circle
+# 90 degrees starts the circle at the top; dividing by number_of_bar spaces them evenly
+angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
+
+# labels on the left side of the circle get right-aligned (hjust = 1)
+# labels on the right side get left-aligned (hjust = 0)
+# this keeps all labels pointing away from the center
+label_data$hjust <- ifelse(angle < -90, 1, 0)
+
+# labels on the left side of the circle get flipped 180 degrees
+# so they don't appear upside down
+label_data$angle <- ifelse(angle < -90, angle + 180, angle)
+```
+
+### Plotting
+```{r}
 # plot
+
+# base layer ggplot using the `dt` data
 p <- ggplot(dt) +
+  # draw a stacked bar for each person, with each site shown as a different color segment
+  # position = "stack" places site segments on top of each other within one bar per person
   geom_bar(aes(x = person_entering_data, y = n, fill = site_full),
            stat = "identity", position = "stack") +
+  # set the y-axis range: the negative value (-10) creates the hollow space in the center,
+  # the upper value adds room above the tallest bar for labels
   ylim(-10, max(label_data$total, na.rm = TRUE) + 5) +
+  # taking away graph outline
   theme_minimal() +
+  # adding in custom color palette
   scale_fill_manual(values = natparks.pals("DeathValley"), name = "Site") +
   theme(
+    # hide the axis tick numbers and labels
     axis.text = element_blank(),
+    # hide the axis titles (x and y labels)
     axis.title = element_blank(),
+    # remove all background grid lines
     panel.grid = element_blank(),
+    # use negative margins so the circular plot fills as much space as possible
     plot.margin = unit(rep(-1, 4), "cm")
   ) +
+    # place a text title in the hollow center of the circle
+  # x = 0 centers it, y = -10 places it in the hollow area below zero
   annotate(geom = "text",
            x = 0, y = -10,
            hjust = .5, vjust = 1,
            label = "NCOS Aquatic Invertebrate\nSamples by Data Enterer",
            size = 2.4, lineheight = .8,
            color = "black") +
+   # transform the bar chart from a straight layout into a circle
   coord_polar(start = 0) +
+    # add each person's name as a rotated label just beyond the tip of their bar
   geom_text(data = label_data,
-            aes(x = person_entering_data, y = total + 1,
+            aes(x = person_entering_data, 
+                # place label just above the top of the bar
+                y = total + 1,
                 label = person_entering_data,
+                # use the left/right alignment calculated earlier
                 hjust = hjust),
             color = "black", fontface = "bold", alpha = 0.6, size = 3,
+            # rotate each label to follow the curve of the circle
             angle = label_data$angle,
+            # don't inherit the x/y aesthetic from the main ggplot() call
             inherit.aes = FALSE)
+# displaying plot
 p
 
 ```
 
+## 4. Describe Your Process
 
 
 
