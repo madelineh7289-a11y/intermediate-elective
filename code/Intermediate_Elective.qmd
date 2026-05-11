@@ -32,8 +32,6 @@ library(readxl)
 
 birds <- read_csv(here("data", "birds.csv"))
 
-ikea <- read_csv(here("data", "ikea.csv"))
-
 aq_ins <- read_xlsx(
   here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
   sheet = "Aquatic Insects")
@@ -79,93 +77,102 @@ aq_ins_clean <- aq_ins |>
 
 ```
 
+# Problems 
+
+## 1. Explain Your Inspiration
+
+- I chose Cristina Cametti’s “IKEA most popular designers” visualization for my inspiration. 
+
+- This made sense for the `birds` dataset because the ikea visualization was the comparison of two categorical variables, which `birds` has. The useage of designers in the ikea visualization inspired me to use informaion from a column which we havent used before - Data Enterer. 
+
+- 
+
+
+
+
+
+
+
+
+
+
 # TidyTuesday 03/11/2020 - IKEA Furniture
 
 ```{r}
 
-# Wrangle data to count entries per person and site
+# remove rows where either person or site is missing, group by site and person
 dt <- aq_ins_clean |> 
-  # remove rows where either person or site is missing
   filter(!is.na(person_entering_data), !is.na(site_full)) |> 
-  # group by every unique combination of site and person
   group_by(site_full, person_entering_data) |> 
-  # count the number of rows in each group, creating column "n"
+# count entries per person/site combination
   tally() |> 
-  # ungroup
   ungroup() |> 
-  # keep only person/site combinations with 2 or more entries, too crowded
+# remove low-count entries to reduce crowding
   filter(n >= 2) |>
-  # sort rows from highest to lowest count
   arrange(desc(n)) |> 
-  # convert site and person columns to factors 
+# convert to factors
   mutate(site_full = as.factor(site_full),
          person_entering_data = as.factor(person_entering_data))
 
-# Set number of empty bars between groups
-# defines how many blank bars to insert as visual padding in the circular plot
+# number of blank bars to add as spacing
 empty_bar <- 2
 
-# create a matrix of NA values with the same number of columns as dt
+# create empty rows for spacing
 to_add <- matrix(NA, empty_bar, ncol(dt))
-# assign column names to match dt so they can be row-bound together
+# match column names to dt
 colnames(to_add) <- colnames(dt)
-# empty rows go to the bottom of dt
+# append empty rows to dt
 dt <- rbind(dt, to_add)
-# assign a numeric ID to each row
-# this ID becomes the x-axis position in the circular plot
+
+# give each bar a numeric position on the x-axis
 dt$id <- seq(1, nrow(dt))
 
-# calculate label angles
-# copy dt so label angle calculations don't affect the plotting data
+# copy dt for label calculations
 label_data <- dt
-# total number of bars including empty ones
+# count total number of bars
 number_of_bar <- nrow(label_data)
-# calculate the angle for each bar's label based on its position in the circle
+
+# calculate rotation angle for each label based on its position in the circle
 angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
-# if the angle puts the label on the left side of the circle, right-align it
-# otherwise left-align — keeps labels readable on both sides
+
+# align labels on the left side of the circle
 label_data$hjust <- ifelse(angle < -90, 1, 0)
-# flip labels on the left side of the circle 180 degrees so they don't appear upside down
+# flip labels on the left side so they stay readable
 label_data$angle <- ifelse(angle < -90, angle + 180, angle)
 
-# Plot
+# initialize plot with bars colored by site
 p <- ggplot(dt) +
-  # draw bars with position on x (by ID), height = count, colored by site
   geom_bar(aes(x = as.factor(id), y = n, fill = site_full), stat = "identity") +
-  # set y-axis limits: negative lower bound creates the hollow center of the wheel;
-  # upper bound gives room above the tallest bar
+# negative lower bound creates hollow center, upper bound gives room above tallest bar
   ylim(-10, max(dt$n, na.rm = TRUE) + 10) +
   theme_minimal() +
-  # apply custom color palette
+# apply custom color palette
   scale_fill_manual(values = natparks.pals("DeathValley")) +
   theme(
-    # remove all axis tick labels
+# remove axis labels, titles, and grid lines
     axis.text = element_blank(),
-    # remove axis titles
     axis.title = element_blank(),
-    # remove background grid lines
     panel.grid = element_blank(),
-    # set negative margins to maximize plot area in the circular layout
     plot.margin = unit(rep(-1, 4), "cm")
   ) +
-  # add a centered title in the middle of the wheel
+# add title in the center of the wheel
   annotate(geom = "text",
-           x = 0, y = -10,        # x = 0 centers it; y = -10 places it in the hollow
-           hjust = .5, vjust = 1,  # center-align horizontally, top-align vertically
+           x = 0, y = -10,
+           hjust = .5, vjust = 1,
            label = "NCOS Aquatic Invertebrate\nSamples by Data Enterer",
-           size = 4.3, lineheight = .8,
+           size = 2.5, lineheight = .8,
            color = "black") +
-  # wrap the bar chart into a circle
+# wrap bar chart into a circle
   coord_polar(start = 0) +
-  # add person name labels at the end of each bar, rotated to follow the circle
+# add person name labels rotated to follow the circle
   geom_text(data = label_data,
-            aes(x = id, y = n + 1,              # place label just above the bar tip
-                label = person_entering_data,    # text to display
-                hjust = hjust),                  # use the calculated alignment
+            aes(x = id, y = n + 1,
+                label = person_entering_data,
+                hjust = hjust),
             color = "black", fontface = "bold", alpha = 0.6, size = 3,
-            angle = label_data$angle,            # rotate label to match bar angle
+            angle = label_data$angle,
             inherit.aes = FALSE)
-
+p
 
 ```
 
