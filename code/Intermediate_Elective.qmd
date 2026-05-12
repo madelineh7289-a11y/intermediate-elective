@@ -168,6 +168,8 @@ label_data$angle <- ifelse(angle < -90, angle + 180, angle)
 
 ### Plotting
 ```{r}
+#| fig-height: 6
+#| fig-width: 8
 # plot
 
 # base layer ggplot using the `dt` data
@@ -203,7 +205,7 @@ p <- ggplot(dt) +
            x = 0, y = -8,
            hjust = .5, vjust = 1,
            label = "NCOS Aquatic\nInvertebrate Samples\nby Data Enterer",
-           size = 2.5, lineheight = 0.8,
+           size = 3.5, lineheight = 0.8,
            color = "black") +
    # transform the bar chart from a straight layout into a circle
   coord_polar(start = 0) +
