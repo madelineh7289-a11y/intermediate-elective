@@ -93,10 +93,7 @@ aq_ins_clean <- aq_ins |>
 ## 2. Plan Your Figure
 
 
-
-
-
-
+![](../images/IMG_2577.jpg)
 
 
 ## 3. Code Your Figure - TidyTuesday 03/11/2020 - IKEA Furniture
