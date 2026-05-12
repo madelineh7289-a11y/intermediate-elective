@@ -38,7 +38,7 @@ library(readxl)
 ## Rendered output
 
 
-The rendered document assignment PDF [View PDF](https://github.com/madelineh7289-a11y/week-05_spring-2026_aquatic-inverts/blob/main/code/Hulle_Madeline_Individual_Assignment_05.pdf)
+The rendered document assignment PDF [View PDF](https://madelineh7289-a11y.github.io/intermediate-elective/code/Intermediate_Elective.pdf)
 
 
 
