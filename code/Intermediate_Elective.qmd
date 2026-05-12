@@ -30,10 +30,26 @@ library(readxl)
 
 ```{r}
 
+# site information
+sites <- read_xlsx(
+  here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
+  sheet = "sites"
+)
 
+#survey data
 aq_ins <- read_xlsx(
   here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
   sheet = "Aquatic Insects")
+
+```
+## Cleaning sites
+```{r}
+
+# creating new object from sites
+ncos_sites <- sites |> 
+  # filtering to only include NCOS quarterly sites
+  filter(sector == "NCOS" & 
+           sampling_frequency == "Quarterly")
 
 ```
 
@@ -57,7 +73,8 @@ aq_ins_clean <- aq_ins |>
     site == "NPB1" ~ "North of Phelps Bridge",
     site == "NPB2" ~ "Phelps Road",
     site == "NWP" ~  "West Pond",
-    site == "NDC" ~ "Devereux Creek"))
+    site == "NDC" ~ "Devereux Creek")) |> 
+  filter(!is.na(person_entering_data), !is.na(site_full))
 
 
 
@@ -89,9 +106,7 @@ aq_ins_clean <- aq_ins |>
 #| label: wrangling
 
 # create new object from `aq_ins_clean`
-dt <- aq_ins_clean |> 
-  # filtering out NAs from the columns of interest
-  filter(!is.na(person_entering_data), !is.na(site_full)) |> 
+dt <- aq_ins_clean |>
   # group by person and site
   group_by(person_entering_data, site_full) |> 
   # count how many times each person/site combination appears
@@ -136,7 +151,7 @@ label_data <- dt |>
 number_of_bar <- nrow(label_data)
 
 # calculate the angle each label should be rotated based on its position in the circle
-# 90 degrees starts the circle at the top; dividing by number_of_bar spaces them evenly
+# 90 degrees starts the circle at the top; dividing by number of bar spaces them evenly
 angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
 
 # labels on the left side of the circle get right-aligned (hjust = 1)
@@ -176,13 +191,13 @@ p <- ggplot(dt) +
     # use negative margins so the circular plot fills as much space as possible
     plot.margin = unit(rep(-1, 4), "cm")
   ) +
-    # place a text title in the hollow center of the circle
+  # place a text title in the hollow center of the circle
   # x = 0 centers it, y = -10 places it in the hollow area below zero
   annotate(geom = "text",
-           x = 0, y = -10,
+           x = 0, y = -8,
            hjust = .5, vjust = 1,
-           label = "NCOS Aquatic Invertebrate\nSamples by Data Enterer",
-           size = 2.4, lineheight = .8,
+           label = "NCOS Aquatic\nInvertebrate Samples\nby Data Enterer",
+           size = 2.5, lineheight = 0.8,
            color = "black") +
    # transform the bar chart from a straight layout into a circle
   coord_polar(start = 0) +
