@@ -1,8 +1,11 @@
 ---
 title: "Intermediate-Elective"
 author: "Madeline Hulle"
-date: "2026-05-10"
+date: "2026-05-12"
 format: pdf
+execute: 
+  warning: false
+  message: false
 
 ---
 # Set Up
