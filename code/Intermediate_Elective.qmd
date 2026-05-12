@@ -36,8 +36,7 @@ library(readxl)
 # site information
 sites <- read_xlsx(
   here("data", "Aquatic Sampling Data-2026-03-10.xlsx"),
-  sheet = "sites"
-)
+  sheet = "sites")
 
 #survey data
 aq_ins <- read_xlsx(
@@ -94,11 +93,7 @@ aq_ins_clean <- aq_ins |>
 - The variables being shown from the `aq_ins_clean` dataset are `person_entering_data` and `site_full`. The person entering data will be represented by one bar and the colors making up the bar (and the relative sizes of these colors) will represent the site that observation came from and the number of samples entered. 
 
 ## 2. Plan Your Figure
-
-
 ![](../images/IMG_2577.jpg)
-
-
 ## 3. Code Your Figure - TidyTuesday 03/11/2020 - IKEA Furniture
 
 ### Wrangling
@@ -119,11 +114,13 @@ dt <- aq_ins_clean |>
   mutate(total = sum(n)) |> 
   # ungroup data frame
   ungroup() |> 
-  # keep only people who have entered data 2 or more times total (keep from overcrowding)
+  # keep only people who have entered data 2 or more times total 
+  # (keep from overcrowding)
   filter(total >= 2) |> 
   # sorting rows from highest to lowest total entries
   arrange(desc(total)) |> 
-  # reorder the person factor levels by total count so the plot displays in order
+  # reorder the person factor levels by total count so the plot 
+  # displays in order
   mutate(person_entering_data = fct_reorder(person_entering_data, total, .desc = TRUE),
           # convert site to a factor so ggplot can use it for colors
          site_full = as.factor(site_full))
@@ -139,19 +136,23 @@ dt <- aq_ins_clean |>
 label_data <- dt |> 
   # group by person
   group_by(person_entering_data) |> 
-    # keep only the first value of "total" for each person (they are all the same)
+    # keep only the first value of "total" for each person 
+    # (they are all the same)
   summarize(total = first(total)) |> 
   # sort by total so label positions match bar positions
   arrange(desc(total)) |> 
-  # create a new column for giving each person a number 1 through n representing their position in the circle
+  # create a new column for giving each person a number 1 through n 
+  # representing their position in the circle
   mutate(id = row_number())
 
 
 # counting how many bars there will be total
 number_of_bar <- nrow(label_data)
 
-# calculate the angle each label should be rotated based on its position in the circle
-# 90 degrees starts the circle at the top; dividing by number of bar spaces them evenly
+# calculate the angle each label should be rotated based on its 
+# position in the circle
+# 90 degrees starts the circle at the top; dividing by number of bar 
+# spaces them evenly
 angle <- 90 - 360 * (label_data$id - 0.5) / number_of_bar
 
 # labels on the left side of the circle get right-aligned (hjust = 1)
@@ -170,11 +171,14 @@ label_data$angle <- ifelse(angle < -90, angle + 180, angle)
 
 # base layer ggplot using the `dt` data
 p <- ggplot(dt) +
-  # draw a stacked bar for each person, with each site shown as a different color segment
-  # position = "stack" places site segments on top of each other within one bar per person
+  # draw a stacked bar for each person, with each site shown as a 
+  # different color segment
+  # position = "stack" places site segments on top of each other 
+  # within one bar per person
   geom_bar(aes(x = person_entering_data, y = n, fill = site_full),
            stat = "identity", position = "stack") +
-  # set the y-axis range: the negative value (-10) creates the hollow space in the center,
+  # set the y-axis range: the negative value (-10) creates the hollow 
+  # space in the center
   # the upper value adds room above the tallest bar for labels
   ylim(-10, max(label_data$total, na.rm = TRUE) + 5) +
   # taking away graph outline
@@ -188,7 +192,8 @@ p <- ggplot(dt) +
     axis.title = element_blank(),
     # remove all background grid lines
     panel.grid = element_blank(),
-    # use negative margins so the circular plot fills as much space as possible
+    # use negative margins so the circular plot fills as much space 
+    # as possible
     plot.margin = unit(rep(-1, 4), "cm")
   ) +
   # place a text title in the hollow center of the circle
@@ -201,7 +206,8 @@ p <- ggplot(dt) +
            color = "black") +
    # transform the bar chart from a straight layout into a circle
   coord_polar(start = 0) +
-    # add each person's name as a rotated label just beyond the tip of their bar
+    # add each person's name as a rotated label just beyond the tip 
+    # of their bar
   geom_text(data = label_data,
             aes(x = person_entering_data, 
                 # place label just above the top of the bar
@@ -225,7 +231,7 @@ p
 
 - This visualization relies on a lot of mathematical components, like calculating the angle for positioning around a circle and using coordinates to place figure components in exact locations, that I never would have thought to be necessary in the creation of this visualization. It was hard for me to keep my patience in this assignment. I saw the figure that I wanted to make, but didn't expect just how many small pieces it would take to build up to it. It really helped me to run everything line by line to conceptualize what each function was achieving and to really see how the plot comes together with each step. 
 
-- This visualization differs from anything that we have made in class, assignments, or electives as it alters the shape of the base ggplot to create a unique and intriguing conceptualization of data that otherwise may seem a bit boring and monotonous. It also differs slightly from the inspiration by stacking all of the observations for a single person (across sites) into one bar, rather than having seperate bars for each person per site. I felt that this better displayed the information that I was interested in, which is which of the NCOS volunteer students entered the most amount of data and which sites were those observations from. I enjoyed getting to play around with the visualization capabilities of R studio, even though it was a bit confusing and frustrating at times.  
+- This visualization differs from anything that we have made in class, assignments, or electives as it alters the shape of the base ggplot to create a unique and intriguing conceptualization of data that otherwise may seem a bit boring and monotonous. It also differs slightly from the inspiration by stacking all of the observations for a single person (across sites) into one bar, rather than having separate bars for each person per site. I felt that this better displayed the information that I was interested in, which is which of the NCOS volunteer students entered the most amount of data and which sites were those observations from. I enjoyed getting to play around with the visualization capabilities of R studio, even though it was a bit confusing and frustrating at times.  
 
 
 
