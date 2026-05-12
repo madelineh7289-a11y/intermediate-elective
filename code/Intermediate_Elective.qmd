@@ -221,5 +221,17 @@ p
 
 ## 4. Describe Your Process
 
+- Using someone else's code to create a visualization was overwhelming in the beginning. I had to not only try to understand the methodology used in terms of functions and arguments, but also had to take a dive into the data frame used to understand the structure of observations (rows and columns) to inform how the code was able to work. 
+
+- This visualization relies on a lot of mathematical components, like calculating the angle for positioning around a circle and using coordinates to place figure components in exact locations, that I never would have thought to be necessary in the creation of this visualization. It was hard for me to keep my patience in this assignment. I saw the figure that I wanted to make, but didn't expect just how many small pieces it would take to build up to it. It really helped me to run everything line by line to conceptualize what each function was achieving and to really see how the plot comes together with each step. 
+
+- This visualization differs from anything that we have made in class, assignments, or electives as it alters the shape of the base ggplot to create a unique and intriguing conceptualization of data that otherwise may seem a bit boring and monotonous. It also differs slightly from the inspiration by stacking all of the observations for a single person (across sites) into one bar, rather than having seperate bars for each person per site. I felt that this better displayed the information that I was interested in, which is which of the NCOS volunteer students entered the most amount of data and which sites were those observations from. I enjoyed getting to play around with the visualization capabilities of R studio, even though it was a bit confusing and frustrating at times.  
+
+
+
+
+
+
+
 
 
