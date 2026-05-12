@@ -121,7 +121,8 @@ dt <- aq_ins_clean |>
   arrange(desc(total)) |> 
   # reorder the person factor levels by total count so the plot 
   # displays in order
-  mutate(person_entering_data = fct_reorder(person_entering_data, total, .desc = TRUE),
+  mutate(person_entering_data = fct_reorder(person_entering_data, total, 
+                                            .desc = TRUE),
           # convert site to a factor so ggplot can use it for colors
          site_full = as.factor(site_full))
 
